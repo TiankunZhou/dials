@@ -391,6 +391,37 @@ class Script(object):
                 transmitted_info = None
             params, options, all_paths = comm.bcast(transmitted_info, root=0)
 
+        print("debug start")
+
+        if (
+            params.mp.method == "sge"
+            and "SGE_TASK_ID" in os.environ
+            and "SGE_TASK_FIRST" in os.environ
+            and "SGE_TASK_LAST" in os.environ
+        ):
+            print("debug 1")
+
+            if "SGE_STEP_SIZE" in os.environ:
+                assert int(os.environ["SGE_STEP_SIZE"]) == 1
+            if (
+                os.environ["SGE_TASK_ID"] == "undefined"
+                or os.environ["SGE_TASK_ID"] == "undefined"
+                or os.environ["SGE_TASK_ID"] == "undefined"
+            ):
+                rank = 0
+                size = 1
+            else:
+                print("debug 2")
+                rank = int(os.environ["SGE_TASK_ID"]) - int(
+                    os.environ["SGE_TASK_FIRST"]
+                )
+                size = (
+                    int(os.environ["SGE_TASK_LAST"])
+                    - int(os.environ["SGE_TASK_FIRST"])
+                    + 1
+                )
+        print("debug end", rank, size)
+
         # Check we have some filenames
         if not all_paths:
             self.parser.print_help()
@@ -631,7 +662,7 @@ class Script(object):
                 return n_accept
 
         # Process the data
-        if params.mp.method == "mpi":
+        if params.mp.method in ["mpi", "sge"]:
             # Configure the logging
             if params.output.logging_dir is None:
                 logfile = None
@@ -654,7 +685,9 @@ class Script(object):
 
             log.config(verbosity=options.verbose, logfile=logfile)
 
-            if size <= 2:  # client/server only makes sense for n>2
+            if (
+                size <= 2 or params.mp.method == "sge"
+            ):  # client/server only makes sense for n>2
                 subset = [
                     item for i, item in enumerate(iterable) if (i + rank) % size == 0
                 ]
