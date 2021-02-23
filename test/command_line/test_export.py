@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import json
 import os
 
@@ -76,7 +74,7 @@ def test_mtz_recalculated_cell(dials_data, tmpdir):
             "format=mtz",
             tmpdir.join("refined_cell.expt"),
             scaled_refl,
-            "d_min=%f" % d_min,
+            f"d_min={d_min:f}",
         ],
         working_directory=tmpdir,
     )
@@ -100,7 +98,7 @@ def test_mtz_best_unit_cell(dials_data, tmpdir):
             "format=mtz",
             scaled_expt,
             scaled_refl,
-            "d_min=%f" % d_min,
+            f"d_min={d_min:f}",
             "best_unit_cell=%g,%g,%g,%g,%g,%g" % best_unit_cell.parameters(),
         ],
         working_directory=tmpdir,
@@ -212,7 +210,7 @@ def test_mtz_primitive_cell(dials_data, tmpdir):
             "dials.reindex",
             scaled_expt.strpath,
             scaled_refl.strpath,
-            'change_of_basis_op="%s"' % cb_op,
+            f'change_of_basis_op="{cb_op}"',
         ],
         working_directory=tmpdir.strpath,
     )
@@ -405,3 +403,21 @@ def test_json_shortened(dials_data, tmpdir):
     assert d["rlp"][:3] == [-0.5975, -0.6141, 0.4702], d["rlp"][:3]
     assert d["imageset_id"][0] == 0
     assert d["experiment_id"][0] == 0
+
+
+def test_export_sum_or_profile_only(dials_data, tmp_path):
+    expt = dials_data("insulin_processed") / "integrated.expt"
+    refl = dials_data("insulin_processed") / "integrated.refl"
+
+    for remove in "prf", "sum":
+        removed = tmp_path / f"removed_{remove}.refl"
+        data = flex.reflection_table.from_file(refl)
+        del data[f"intensity.{remove}.value"]
+        del data[f"intensity.{remove}.variance"]
+        data.as_file(removed)
+        result = procrunner.run(
+            ["dials.export", expt, removed, f"mtz.hklout=removed_{remove}.mtz"],
+            working_directory=tmp_path,
+        )
+        assert not result.returncode and not result.stderr
+        assert (tmp_path / f"removed_{remove}.mtz").is_file()

@@ -1,7 +1,6 @@
 # LIBTBX_SET_DISPATCHER_NAME dials.background
 # LIBTBX_PRE_DISPATCHER_INCLUDE_SH export PHENIX_GUI_ENVIRONMENT=1
 
-from __future__ import absolute_import, division, print_function
 
 import math
 
@@ -9,11 +8,11 @@ import iotbx.phil
 from libtbx.phil import parse
 from scitbx import matrix
 
+import dials.util.masking
 from dials.algorithms.spot_finding.factory import SpotFinderFactory
 from dials.algorithms.spot_finding.factory import phil_scope as spot_phil
 from dials.array_family import flex
 from dials.util import Sorry, show_mail_handle_errors
-from dials.util.masking import MaskGenerator
 from dials.util.options import OptionParser, flatten_experiments
 
 help_message = """
@@ -105,9 +104,9 @@ def run(args=None):
                 mask_params=params.masking,
             )
 
-            print("%8s %8s %8s" % ("d", "I", "sig"))
+            print(f"{'d':>8} {'I':>8} {'sig':>8}")
             for j in range(len(I)):
-                print("%8.3f %8.3f %8.3f" % (d[j], I[j], sig[j]))
+                print(f"{d[j]:8.3f} {I[j]:8.3f} {sig[j]:8.3f}")
 
             d_spacings.append(d)
             intensities.append(I)
@@ -131,7 +130,7 @@ def run(args=None):
             xticks = ax.get_xticks().tolist()
             ax.xaxis.set_major_locator(mticker.FixedLocator(xticks))
             x_tick_labs = [
-                "" if e <= 0.0 else "{:.2f}".format(math.sqrt(1.0 / e)) for e in xticks
+                "" if e <= 0.0 else f"{math.sqrt(1.0 / e):.2f}" for e in xticks
             ]
             ax.set_xticklabels(x_tick_labs)
 
@@ -154,8 +153,7 @@ def background(imageset, indx, n_bins, corrected=False, mask_params=None):
         # Default mask params for trusted range
         mask_params = phil_scope.fetch(parse("")).extract().masking
 
-    mask_generator = MaskGenerator(mask_params)
-    mask = mask_generator.generate(imageset)
+    mask = dials.util.masking.generate_mask(imageset, mask_params)
 
     detector = imageset.get_detector()
     beam = imageset.get_beam()
@@ -188,11 +186,10 @@ def background(imageset, indx, n_bins, corrected=False, mask_params=None):
     background = data.select(background_pixels.iselection())
 
     # print some summary information
-    print("Mean background: %.3f" % (flex.sum(background) / background.size()))
+    print(f"Mean background: {flex.sum(background) / background.size():.3f}")
     if len(signal) > 0:
         print(
-            "Max/total signal pixels: %.0f / %.0f"
-            % (flex.max(signal), flex.sum(signal))
+            f"Max/total signal pixels: {flex.max(signal):.0f} / {flex.sum(signal):.0f}"
         )
     else:
         print("No signal pixels on this image")
