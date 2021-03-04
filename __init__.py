@@ -1,13 +1,31 @@
 import logging
 import sys
-import warnings
 
 if sys.version_info.major == 2:
-    warnings.warn(
-        "Python 2 is no longer supported. "
-        "If you need Python 2.7 support please use the DIALS 2.2 release branch.",
-        UserWarning,
-    )
+    sys.exit("Python 2 is no longer supported")
+
+import pathlib
+
+_dials = pathlib.Path(__file__).parents[2]
+
+exit(
+    ("=" * 80)
+    + """
+
+Your dials repository is still tracking 'master',
+but the main dials branch has been renamed to 'main'.
+
+Please go into your dials repository at %s and run the following commands:
+  git branch -m master main
+  git fetch origin
+  git branch -u origin/main main
+  git pull --rebase
+
+For more information please see https://github.com/dials/dials/issues/1546
+"""
+    % _dials
+)
+
 
 logging.getLogger("dials").addHandler(logging.NullHandler())
 
